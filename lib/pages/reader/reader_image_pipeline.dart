@@ -34,10 +34,22 @@ extension _ReaderImagePipeline on _ReaderPageState {
 
   // ── 图片预加载 ──
 
+  /// 先提交当前页和接下来要读的页，避免跳页后旧页排在前面占用下载队列。
+  /// 保持同样的前后窗口，只调整请求顺序。
+  Iterable<int> _readerPrefetchOffsets(int range) sync* {
+    yield 0;
+    for (var distance = 1; distance <= range; distance++) {
+      yield distance;
+    }
+    for (var distance = 1; distance <= range; distance++) {
+      yield -distance;
+    }
+  }
+
   void _preloadImages(int centerIndex, {int range = 2}) {
     if (_detail == null || _detail!.isDownloaded) return;
     final count = _detail!.contents.length;
-    for (int offset = -range; offset <= range; offset++) {
+    for (final offset in _readerPrefetchOffsets(range)) {
       final i = centerIndex + offset;
       if (i < 0 || i >= count) continue;
       precacheImage(
@@ -56,9 +68,8 @@ extension _ReaderImagePipeline on _ReaderPageState {
   /// 连续阅读预加载：以 (章节索引, 章节内索引) 为中心，预加载相邻图片（跨章）。
   void _preloadChainImages(int chapterIndex, int localIndex, {int range = 2}) {
     if (_chain.isEmpty) return;
-    final chapter = _chain[chapterIndex.clamp(0, _chain.length - 1)];
-    if (chapter.isDownloaded) return;
-    for (int offset = -range; offset <= range; offset++) {
+    // 当前章离线时仍需检查相邻章，窗口内的在线图片也应提前加载。
+    for (final offset in _readerPrefetchOffsets(range)) {
       var ci = chapterIndex;
       var li = localIndex + offset;
       // 处理跨章回溯/前进

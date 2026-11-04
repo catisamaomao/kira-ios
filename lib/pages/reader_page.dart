@@ -27,6 +27,7 @@ import '../utils/bookmark_store.dart';
 import '../utils/chapter_summary_cache.dart';
 import '../utils/download_manager.dart';
 import '../utils/fling_brake_tap_guard.dart';
+import '../utils/image_file_service.dart';
 import '../utils/image_load_stats.dart';
 import '../utils/network_error.dart';
 import '../utils/platform_features.dart';

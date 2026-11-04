@@ -265,6 +265,8 @@ extension _ReaderChain on _ReaderPageState {
         // 链尾增长后按「前1后1」窗口裁剪，避免长会话无限膨胀。
         _pruneChainWindow();
       });
+      // 追加前的预取还拿不到新章 URL；按裁剪后的当前索引补齐跨章窗口。
+      _preloadChainImages(_chainIndex, _currentPage - 1);
       // 追加后立即预加载该话评论，使分隔区评论按钮能显示数量
       if (_user.commentPreload) unawaited(_preloadComments(chapter: next));
       _scheduleChainLoadingReset(isPrev: false);

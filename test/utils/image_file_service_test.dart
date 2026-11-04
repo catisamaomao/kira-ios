@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kira/utils/cover_image_cache.dart';
+import 'package:kira/utils/image_file_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -127,14 +127,15 @@ void main() {
   late PathProviderPlatform previousPaths;
   late HttpOverrides? previousOverrides;
   late _ImageServer server;
-  final services = <CoverImageFileService>[];
+  final services = <BoundedImageFileService>[];
   final managers = <CacheManager>[];
 
-  CoverImageFileService service({
+  BoundedImageFileService service({
     Duration idle = const Duration(milliseconds: 300),
     Duration total = const Duration(seconds: 3),
   }) {
-    final result = CoverImageFileService(
+    final result = BoundedImageFileService(
+      source: 'image_test',
       idleTimeout: idle,
       totalTimeout: total,
     );
@@ -158,7 +159,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    temporary = await Directory.systemTemp.createTemp('kira-cover-cache-');
+    temporary = await Directory.systemTemp.createTemp('kira-image-cache-');
     previousPaths = PathProviderPlatform.instance;
     PathProviderPlatform.instance = _Paths(temporary.path);
     previousOverrides = HttpOverrides.current;
@@ -183,24 +184,46 @@ void main() {
     await temporary.delete(recursive: true);
   });
 
-  test('normal response preserves metadata and pooled connection', () async {
-    server.handler = server.respond;
-    final fetcher = service(total: const Duration(milliseconds: 500));
-    final first = await fetcher.get(server.url('/first'));
-    expect(first.statusCode, 200);
-    expect(first.contentLength, 3);
-    expect(first.eTag, '"original"');
-    expect(first.fileExtension, '.jpg');
-    expect(
-      first.validTill.difference(DateTime.now()).inSeconds,
-      inInclusiveRange(118, 120),
-    );
-    expect(await first.content.expand((chunk) => chunk).toList(), [1, 2, 3]);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    final second = await fetcher.get(server.url('/second'));
-    await second.content.drain<void>();
-    expect(server.remotePorts[0], server.remotePorts[1]);
-  });
+  test(
+    'normal response preserves headers, metadata and pooled connection',
+    () async {
+      server.handler = server.respond;
+      final fetcher = service(total: const Duration(milliseconds: 500));
+      final first = await fetcher.get(
+        server.url('/first'),
+        headers: const {
+          'user-agent': 'reader-agent',
+          'x-requested-with': 'com.manga2020.app',
+          'If-None-Match': '"previous"',
+        },
+      );
+      expect(
+        server.requests.single.headers.value('user-agent'),
+        'reader-agent',
+      );
+      expect(
+        server.requests.single.headers.value('x-requested-with'),
+        'com.manga2020.app',
+      );
+      expect(
+        server.requests.single.headers.value(HttpHeaders.ifNoneMatchHeader),
+        '"previous"',
+      );
+      expect(first.statusCode, 200);
+      expect(first.contentLength, 3);
+      expect(first.eTag, '"original"');
+      expect(first.fileExtension, '.jpg');
+      expect(
+        first.validTill.difference(DateTime.now()).inSeconds,
+        inInclusiveRange(118, 120),
+      );
+      expect(await first.content.expand((chunk) => chunk).toList(), [1, 2, 3]);
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      final second = await fetcher.get(server.url('/second'));
+      await second.content.drain<void>();
+      expect(server.remotePorts[0], server.remotePorts[1]);
+    },
+  );
 
   for (final sendHeaders in [false, true]) {
     test(

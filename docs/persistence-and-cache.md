@@ -218,7 +218,7 @@ Future<void> deleteAll();
 - Android 侧授权:API 30+ 走 `MANAGE_EXTERNAL_STORAGE`("所有文件访问"系统开关页,**不是**应用内运行时弹窗);API ≤29 期望退化到 `WRITE_EXTERNAL_STORAGE` 的运行时授权。两者都**必须**声明在 `android/app/src/main/AndroidManifest.xml` 的 `<uses-permission>` —— `permission_handler` 的 `determinePermissionStatus`/`requestPermissions` 会先查 manifest,缺声明时直接判定 `denied` 并 `continue`,不会调用 `launchSpecialPermission`,表现为点"保存位置"立刻提示"未授予存储权限"、无任何系统页或弹窗。选目录用 `file_picker`(`lib/utils/download_directory.dart`)。
   - 已知缺口:Android 10(API 29)下 `Permission.storage` 仅在 `WRITE_EXTERNAL_STORAGE` 已声明**且** `Environment.isExternalStorageLegacy()` 为真时才请求;当前未声明 `requestLegacyExternalStorage`,该分支 manifest names 为空,同样静默失败(API 24-28 不受影响)。
 
-`_ReaderImageFileService`（`reader_image_cache.dart:3`）按响应 `Cache-Control: max-age` 解析有效期，默认 7 天，`no-cache` 立即过期。
+`_ReaderImageFileService`（`reader_image_cache.dart:3`）委托 `BoundedImageFileService` 下载，保留阅读器请求头与成功加载统计。按响应 `Cache-Control: max-age` 解析有效期，默认 7 天，`no-cache`／`no-store` 立即过期。连接／响应空闲超时沿用用户设置，总期限为其 4 倍；超时取消底层请求，避免与自动重试重叠。原图仍存入独立的 `readerImageCache`。
 
 `CoverImageCacheManager.install()` 在代理初始化后、图片挂载前替换 `CachedNetworkImageProvider.defaultCacheManager`，复用旧封面文件与数据库。不要另外用同一 key 构造第二个管理器。封面下载使用共享连接池，单请求连接／响应空闲超时 15 秒、总期限 30 秒；取消单个请求不关闭其他下载。界面缩放只影响内存解码，不另存缩略图或修改原图文件。
 
