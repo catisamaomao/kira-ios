@@ -1,7 +1,59 @@
 #!/bin/sh
+set -eu
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
-powershell -ExecutionPolicy Bypass -File "./scripts/update_version_code.ps1"
+if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+  printf '%s\n' 'Cannot calculate versionCode from shallow history. Run git fetch --unshallow, then retry the commit.' >&2
+  exit 1
+fi
+
+commit_count="$(git rev-list --count HEAD)"
+case "$commit_count" in
+  ''|*[!0-9]*)
+    printf '%s\n' 'Cannot calculate versionCode from HEAD history.' >&2
+    exit 1
+    ;;
+esac
+version_code=$((commit_count + 1))
+
+# Validate before either implementation so a missing/ambiguous version cannot
+# silently succeed. This matches the numeric version format of the PS script.
+if ! LC_ALL=C awk '
+  /^version:/ {
+    count++
+    if ($0 !~ /^version:[ \t]*[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?([ \t]*(#.*)?)?\r?$/) invalid = 1
+  }
+  END { exit !(count == 1 && !invalid) }
+' pubspec.yaml; then
+  printf '%s\n' 'Expected exactly one pubspec.yaml version: x.y.z[+number] field.' >&2
+  exit 1
+fi
+
+if command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/update_version_code.ps1
+elif command -v powershell >/dev/null 2>&1; then
+  powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/update_version_code.ps1
+else
+  temporary_pubspec="$(mktemp ./.pubspec.yaml.XXXXXX)"
+  trap 'rm -f "$temporary_pubspec"' 0
+  trap 'exit 1' HUP INT TERM
+  # C locale leaves UTF-8 bytes outside the ASCII version field untouched.
+  LC_ALL=C awk -v version_code="$version_code" '
+    /^version:/ {
+      match($0, /^version:[ \t]*[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?/)
+      version = substr($0, 1, RLENGTH)
+      suffix = substr($0, RLENGTH + 1)
+      sub(/^version:[ \t]*/, "", version)
+      sub(/\+[0-9]+$/, "", version)
+      print "version: " version "+" version_code suffix
+      next
+    }
+    { print }
+  ' pubspec.yaml > "$temporary_pubspec"
+  # Keep the existing file permissions, including on macOS without GNU stat.
+  cat "$temporary_pubspec" > pubspec.yaml
+  printf 'Updated versionCode -> %s\n' "$version_code"
+fi
 
 git add pubspec.yaml

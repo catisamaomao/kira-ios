@@ -15,6 +15,7 @@ import '../../theme/app_status_colors.dart';
 import '../../theme/novel_reader_theme.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/font_manager.dart';
+import '../../utils/platform_features.dart';
 import '../../widgets/app_sheet.dart';
 import '../../widgets/collapsible_content.dart';
 import '../../widgets/collapsible_switch_tile.dart';
@@ -374,15 +375,16 @@ class _NovelReaderSettingsSheetState extends State<NovelReaderSettingsSheet> {
               icon: Icons.auto_stories_outlined,
               child: Column(
                 children: [
-                  SwitchListTile.adaptive(
-                    key: const ValueKey('novel-volume-key'),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.readerVolumeKeyPageTurn),
-                    subtitle: Text(l10n.readerVolumeKeyPageTurnDesc),
-                    value: _settings.volumeKey,
-                    onChanged: (value) =>
-                        _change(_settings.copyWith(volumeKey: value)),
-                  ),
+                  if (PlatformFeatures.volumeKeyPageTurn)
+                    SwitchListTile.adaptive(
+                      key: const ValueKey('novel-volume-key'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.readerVolumeKeyPageTurn),
+                      subtitle: Text(l10n.readerVolumeKeyPageTurnDesc),
+                      value: _settings.volumeKey,
+                      onChanged: (value) =>
+                          _change(_settings.copyWith(volumeKey: value)),
+                    ),
                   SwitchListTile.adaptive(
                     key: const ValueKey('novel-realistic-page-turn'),
                     contentPadding: EdgeInsets.zero,

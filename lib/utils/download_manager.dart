@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -685,7 +686,10 @@ class DownloadManager extends ChangeNotifier {
       final contents = (decoded['contents'] as List?)?.toList() ?? const [];
       final result = List<String?>.filled(total, null);
       for (var i = 0; i < total && i < contents.length; i++) {
-        final p = contents[i]?.toString() ?? '';
+        final p = _resolveStoredDownloadPath(contents[i]?.toString() ?? '', [
+          pathWord,
+          chapterUuid,
+        ]);
         if (p.isNotEmpty && await File(p).exists()) {
           result[i] = p;
         }
@@ -695,6 +699,29 @@ class DownloadManager extends ChangeNotifier {
       unawaited(AppLogger.instance.recordWarning(e, stackTrace: st));
       return List<String?>.filled(total, null);
     }
+  }
+
+  /// iOS can move Documents to a new container when an app is re-signed or
+  /// updated. Recover only a file with the same comic/chapter suffix; unrelated
+  /// paths and genuinely missing files retain the existing corruption checks.
+  String _resolveStoredDownloadPath(String storedPath, List<String> parents) {
+    if (storedPath.isEmpty ||
+        !path.isAbsolute(storedPath) ||
+        File(storedPath).existsSync()) {
+      return storedPath;
+    }
+    final expected = parents.map(_safePathSegment).toList();
+    var oldParent = path.dirname(storedPath);
+    for (final segment in expected.reversed) {
+      if (path.basename(oldParent) != segment) return storedPath;
+      oldParent = path.dirname(oldParent);
+    }
+    final candidate = path.joinAll([
+      _rootDirectory!.path,
+      ...expected,
+      path.basename(storedPath),
+    ]);
+    return File(candidate).existsSync() ? candidate : storedPath;
   }
 
   static String _joinPath(List<String> segments) => segments

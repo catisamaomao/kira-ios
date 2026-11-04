@@ -259,14 +259,17 @@ class _ReaderImageViewerState extends State<ReaderImageViewer> {
         );
         try {
           await tempFile.writeAsBytes(bytes, flush: true);
-          await Gal.putImage(tempFile.path, album: 'kira');
+          await Gal.putImage(
+            tempFile.path,
+            album: Platform.isIOS ? null : 'kira',
+          );
         } finally {
           if (tempFile.existsSync()) {
             unawaited(tempFile.delete().catchError((_) => tempFile));
           }
         }
       } else {
-        await Gal.putImageBytes(bytes, album: 'kira');
+        await Gal.putImageBytes(bytes, album: Platform.isIOS ? null : 'kira');
       }
       if (mounted) showToast(context, l10n.readerImageSaved);
     } catch (error, stackTrace) {

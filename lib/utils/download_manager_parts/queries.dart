@@ -267,8 +267,14 @@ extension DownloadManagerQueriesPart on DownloadManager {
         return null;
       }
 
-      final detail = ChapterDetail.fromDownloadedJson(
+      final storedDetail = ChapterDetail.fromDownloadedJson(
         Map<String, dynamic>.from(decoded),
+      );
+      final detail = storedDetail.copyWith(
+        contents: [
+          for (final storedPath in storedDetail.contents)
+            _resolveStoredDownloadPath(storedPath, [pathWord, chapterUuid]),
+        ],
       );
       // 部分下载章节：失败页的 contents 为空串、文件不存在，属正常；
       // 但 manifest 标记为已下载的页若文件丢失则视为损坏，清理。

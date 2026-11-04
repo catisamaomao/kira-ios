@@ -33,6 +33,40 @@ void main() {
   });
   tearDown(teardownSecureCredentialStoreForTest);
 
+  testWidgets(
+    'iOS uses Documents without offering external directory pickers',
+    (tester) async {
+      final downloads = DownloadManager.forTesting(
+        rootDirectory: Directory.systemTemp,
+      );
+      addTearDown(downloads.dispose);
+      await tester.runAsync(downloads.reloadScalarSettings);
+      await tester.pumpWidget(
+        wrapWithApp(
+          DownloadSettingsSheet(
+            downloads: downloads,
+            novelDownloads: _Novels(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final folderTiles = find.byWidgetPredicate(
+        (widget) =>
+            widget is ListTile &&
+            widget.leading is Icon &&
+            (widget.leading! as Icon).icon == Icons.folder_open_outlined,
+      );
+      expect(folderTiles, findsNWidgets(2));
+      for (final tile in tester.widgetList<ListTile>(folderTiles)) {
+        expect(tile.onTap, isNull);
+        expect(tile.trailing, isNull);
+        expect(tile.subtitle, isNotNull);
+      }
+      expect(find.textContaining('iOS 下载时请保持应用在前台'), findsOneWidget);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
   for (final size in [
     const Size(375, 812),
     const Size(320, 640),

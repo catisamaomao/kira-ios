@@ -1393,6 +1393,28 @@ void main() {
     });
   }
 
+  testWidgets(
+    'iOS hides unsupported volume keys but keeps touch page controls',
+    (tester) async {
+      await _mount(
+        tester,
+        settings: const NovelReaderSettings(mode: NovelReaderMode.paged),
+        onChanged: (_) {},
+      );
+      await _toggleFold(tester, 'novel-page-turn-settings');
+      expect(find.byKey(const ValueKey('novel-volume-key')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('novel-realistic-page-turn')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('novel-instant-page-turn')),
+        findsOneWidget,
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
   testWidgets('reading mode switch reveals and edits page-turn settings', (
     tester,
   ) async {

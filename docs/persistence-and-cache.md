@@ -206,7 +206,7 @@ Future<void> deleteAll();
 | 项 | 路径/键 | 管理 |
 | ---- | ---------- | ---- |
 | 阅读器图片 | `CacheManager(Config('readerImageCache', ...))`（`reader_page.dart:68`） | 缓存管理页可清 |
-| 封面/头像图片 | `DefaultCacheManager`（默认 key `libCachedNetworkImageData`） | 缓存管理页可清 |
+| 封面/头像图片 | `CoverImageCacheManager.instance`（沿用 `DefaultCacheManager.key`，即 `libCachedImageData`） | 缓存管理页清理同一单例 |
 | 漫画下载 | 默认 `getApplicationDocumentsDirectory()/comic_downloads/`，清单 `manifest.json`；可通过 `download_save_directory` 自定义为公共目录（Android，见下） | `DownloadManager` |
 | 漫画下载队列 | prefs 键 `download_queue_state_v1`：队列任务、暂停状态与批次失败快照，启动时恢复并自动续传（`main.dart` 初始化 `DownloadManager`） | `DownloadManager` |
 | 字体 / 原生库 | 各自目录 | 缓存管理页可清 |
@@ -219,6 +219,8 @@ Future<void> deleteAll();
   - 已知缺口:Android 10(API 29)下 `Permission.storage` 仅在 `WRITE_EXTERNAL_STORAGE` 已声明**且** `Environment.isExternalStorageLegacy()` 为真时才请求;当前未声明 `requestLegacyExternalStorage`,该分支 manifest names 为空,同样静默失败(API 24-28 不受影响)。
 
 `_ReaderImageFileService`（`reader_image_cache.dart:3`）按响应 `Cache-Control: max-age` 解析有效期，默认 7 天，`no-cache` 立即过期。
+
+`CoverImageCacheManager.install()` 在代理初始化后、图片挂载前替换 `CachedNetworkImageProvider.defaultCacheManager`，复用旧封面文件与数据库。不要另外用同一 key 构造第二个管理器。封面下载使用共享连接池，单请求连接／响应空闲超时 15 秒、总期限 30 秒；取消单个请求不关闭其他下载。界面缩放只影响内存解码，不另存缩略图或修改原图文件。
 
 ## 7. 备份/恢复（设置迁移）
 

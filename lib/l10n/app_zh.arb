@@ -2552,5 +2552,7 @@
   "accountViewPasswordLabel": "密码",
   "accountViewPasswordUnavailable": "未保存密码（该账号未勾选「记住账号」或使用令牌登录）",
   "accountViewTokenLabel": "令牌 (Token)",
-  "accountViewCopiedToast": "已复制"
+  "accountViewCopiedToast": "已复制",
+  "iosDownloadLocationDescription": "下载保存在应用文档目录，可在“文件”App 中的 Kira 目录查看。",
+  "iosDownloadForegroundDescription": "iOS 下载时请保持应用在前台；切换到后台或锁屏后，系统可能暂停下载。"
 }

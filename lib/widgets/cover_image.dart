@@ -28,19 +28,36 @@ class CoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: CachedNetworkImage(
-        imageUrl: url,
-        width: width,
-        height: height,
-        fit: fit,
-        fadeInDuration: adaptiveDuration(context, coverFadeDuration),
-        fadeInCurve: Curves.easeOut,
-        fadeOutDuration: Duration.zero,
-        placeholder: (_, _) => placeholder,
-        errorWidget: (_, _, _) => errorWidget,
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.constrain(
+          Size(width ?? constraints.maxWidth, height ?? constraints.maxHeight),
+        );
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        int? pixels(double dimension) => dimension.isFinite && dimension > 0
+            ? (dimension * dpr).ceil().clamp(1, 4096)
+            : null;
+        final cacheWidth = pixels(size.width);
+
+        return ColoredBox(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: CachedNetworkImage(
+            imageUrl: url,
+            width: width,
+            height: height,
+            // Resize only the decoded bitmap; retain the original disk cache.
+            // One dimension preserves the source aspect ratio for BoxFit.cover.
+            memCacheWidth: cacheWidth,
+            memCacheHeight: cacheWidth == null ? pixels(size.height) : null,
+            fit: fit,
+            fadeInDuration: adaptiveDuration(context, coverFadeDuration),
+            fadeInCurve: Curves.easeOut,
+            fadeOutDuration: Duration.zero,
+            placeholder: (_, _) => placeholder,
+            errorWidget: (_, _, _) => errorWidget,
+          ),
+        );
+      },
     );
   }
 }

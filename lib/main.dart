@@ -24,6 +24,7 @@ import 'theme/app_radius.dart';
 import 'theme/app_typography.dart';
 import 'utils/app_logger.dart';
 import 'utils/app_storage.dart';
+import 'utils/cover_image_cache.dart';
 import 'utils/display_mode_preference.dart';
 import 'utils/download_foreground_controller.dart';
 import 'utils/download_manager.dart';
@@ -164,6 +165,7 @@ Future<void> _bootstrap() async {
 
   await _startupStep('user_manager', () => UserManager().init());
   await _startupStep('network_proxy', NetworkProxy.init);
+  CoverImageCacheManager.install();
   // 恢复漫画与轻小说持久化下载队列并自动续传。
   final comicDownloads = DownloadManager();
   await _startupStep('comic_downloads', comicDownloads.init);

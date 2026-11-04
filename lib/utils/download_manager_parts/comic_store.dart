@@ -175,7 +175,16 @@ extension DownloadManagerComicStorePart on DownloadManager {
       final decoded = jsonDecode(file.readAsStringSync());
       if (decoded is! Map) return null;
       final info = LocalComicInfo.fromJson(Map<String, dynamic>.from(decoded));
-      final coverPath = info.coverPath;
+      final coverPath = info.coverPath == null
+          ? null
+          : _resolveStoredDownloadPath(info.coverPath!, [pathWord]);
+      if (coverPath != info.coverPath) {
+        return LocalComicInfo(
+          comic: info.comic.copyWith(cover: coverPath),
+          coverPath: coverPath,
+          updatedAt: info.updatedAt,
+        );
+      }
       if (coverPath != null &&
           coverPath.isNotEmpty &&
           !File(coverPath).existsSync()) {

@@ -7378,6 +7378,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已复制'**
   String get accountViewCopiedToast;
+
+  /// No description provided for @iosDownloadLocationDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载保存在应用文档目录，可在“文件”App 中的 Kira 目录查看。'**
+  String get iosDownloadLocationDescription;
+
+  /// No description provided for @iosDownloadForegroundDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'iOS 下载时请保持应用在前台；切换到后台或锁屏后，系统可能暂停下载。'**
+  String get iosDownloadForegroundDescription;
 }
 
 class _AppLocalizationsDelegate

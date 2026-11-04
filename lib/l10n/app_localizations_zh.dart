@@ -4026,6 +4026,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountViewCopiedToast => '已复制';
+
+  @override
+  String get iosDownloadLocationDescription =>
+      '下载保存在应用文档目录，可在“文件”App 中的 Kira 目录查看。';
+
+  @override
+  String get iosDownloadForegroundDescription =>
+      'iOS 下载时请保持应用在前台；切换到后台或锁屏后，系统可能暂停下载。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8050,4 +8058,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get accountViewCopiedToast => '已複製';
+
+  @override
+  String get iosDownloadLocationDescription =>
+      '下載儲存在應用程式文件目錄，可在「檔案」App 中的 Kira 目錄查看。';
+
+  @override
+  String get iosDownloadForegroundDescription =>
+      'iOS 下載時請保持應用程式在前景；切換到背景或鎖定螢幕後，系統可能暫停下載。';
 }

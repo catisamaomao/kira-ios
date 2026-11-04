@@ -29,6 +29,7 @@ import '../utils/download_manager.dart';
 import '../utils/fling_brake_tap_guard.dart';
 import '../utils/image_load_stats.dart';
 import '../utils/network_error.dart';
+import '../utils/platform_features.dart';
 import '../utils/reading_history.dart';
 import '../utils/reading_stats.dart';
 import '../utils/toast.dart';
@@ -348,8 +349,18 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     _user.addListener(_onUserSettingsChanged);
     _loadChapter();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _volumeChannel.invokeMethod('enableImmersive').catchError((_) {});
-    _volumeChannel.setMethodCallHandler(_handleVolumeMethod);
+    if (PlatformFeatures.volumeKeyPageTurn) {
+      _volumeChannel.invokeMethod('enableImmersive').catchError((error, stack) {
+        unawaited(
+          AppLogger.instance.recordWarning(
+            error,
+            stackTrace: stack,
+            source: 'reader.immersive',
+          ),
+        );
+      });
+      _volumeChannel.setMethodCallHandler(_handleVolumeMethod);
+    }
     _updateVolumeIntercept();
   }
 
@@ -361,8 +372,21 @@ class _ReaderPageState extends State<ReaderPage> with WidgetsBindingObserver {
     // 进度保存是防抖的，离开阅读页必须立刻落盘，否则最后几页会丢。
     unawaited(ReadingHistory.flush());
     _setVolumeIntercept(false);
-    _volumeChannel.invokeMethod('disableImmersive').catchError((_) {});
-    _volumeChannel.setMethodCallHandler(null);
+    if (PlatformFeatures.volumeKeyPageTurn) {
+      _volumeChannel.invokeMethod('disableImmersive').catchError((
+        error,
+        stack,
+      ) {
+        unawaited(
+          AppLogger.instance.recordWarning(
+            error,
+            stackTrace: stack,
+            source: 'reader.immersive',
+          ),
+        );
+      });
+      _volumeChannel.setMethodCallHandler(null);
+    }
     _bookmarks.removeListener(_onBookmarksChanged);
     _user.removeListener(_onUserSettingsChanged);
     _scrollZoomController.removeListener(_onScrollZoomControllerChanged);

@@ -91,6 +91,48 @@ void main() {
     expectFadeIn(tester, duration: Duration.zero);
   });
 
+  testWidgets('infinite fill size decodes to layout width at screen density', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrapWithApp(
+        const MediaQuery(
+          data: MediaQueryData(devicePixelRatio: 2),
+          child: Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: CoverImage(
+                url: imageUrl,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final image = imageOf(tester);
+    expect(image.memCacheWidth, 240);
+    expect(image.memCacheHeight, isNull); // Preserve the source aspect ratio.
+    expect(image.maxWidthDiskCache, isNull); // Keep reusable original files.
+    expect(tester.getSize(find.byType(CoverImage)), const Size(120, 180));
+  });
+
+  testWidgets('height bounds decoding when width is unbounded', (tester) async {
+    await tester.pumpWidget(
+      wrapWithApp(
+        const MediaQuery(
+          data: MediaQueryData(devicePixelRatio: 2),
+          child: Row(children: [CoverImage(url: imageUrl, height: 160)]),
+        ),
+      ),
+    );
+    expect(imageOf(tester).memCacheWidth, isNull);
+    expect(imageOf(tester).memCacheHeight, 320);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('CoverImage preserves custom placeholders and errors', (
     tester,
   ) async {

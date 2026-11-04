@@ -26,6 +26,7 @@ import '../utils/adaptive_motion.dart';
 import '../utils/app_logger.dart';
 import '../utils/novel_bookmark_store.dart';
 import '../utils/novel_reading_store.dart';
+import '../utils/platform_features.dart';
 import '../utils/toast.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/error_retry_view.dart';
@@ -197,8 +198,12 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage>
     WidgetsBinding.instance.addObserver(this);
     // 与漫画阅读器一致：阅读期间窗口允许延伸进刘海/挖孔区（SHORT_EDGES）。
     // 否则沉浸模式下挖孔区域不随窗口扩展，露出一条纯黑的窗口背景。
-    _volumeChannel.invokeMethod('enableImmersive').catchError((_) {});
-    _volumeChannel.setMethodCallHandler(_handleVolumeMethod);
+    if (PlatformFeatures.volumeKeyPageTurn) {
+      _volumeChannel.invokeMethod('enableImmersive').catchError((error, stack) {
+        _warn(error, stack, 'immersive');
+      });
+      _volumeChannel.setMethodCallHandler(_handleVolumeMethod);
+    }
     _updateVolumeIntercept();
     _beginSession();
   }
@@ -279,7 +284,7 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage>
   }
 
   Future<void> _setVolumeIntercept(bool enabled) async {
-    if (!_volumeChannelAvailable) return;
+    if (!PlatformFeatures.volumeKeyPageTurn || !_volumeChannelAvailable) return;
     try {
       await _volumeChannel.invokeMethod(enabled ? 'enable' : 'disable');
     } on MissingPluginException {
@@ -1290,9 +1295,18 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage>
       overlays: SystemUiOverlay.values,
     );
     unawaited(_setVolumeIntercept(false));
-    _volumeChannel.setMethodCallHandler(null);
+    if (PlatformFeatures.volumeKeyPageTurn) {
+      _volumeChannel.setMethodCallHandler(null);
+    }
     // 恢复默认的刘海区避让模式。
-    _volumeChannel.invokeMethod('disableImmersive').catchError((_) {});
+    if (PlatformFeatures.volumeKeyPageTurn) {
+      _volumeChannel.invokeMethod('disableImmersive').catchError((
+        error,
+        stack,
+      ) {
+        _warn(error, stack, 'immersive');
+      });
+    }
     super.dispose();
   }
 

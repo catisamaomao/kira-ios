@@ -35,6 +35,10 @@
 
 [开发指南](docs/development.md)
 
+## iOS 自用分支
+
+此分支补充 iOS／iPadOS 15 及以上版本的源码构建、个人签名安装和平台适配。需要 Mac、Xcode、Flutter 3.44.2 与自己的 Apple 账号；免费 Apple ID 可用于个人设备安装。构建步骤、已验证范围及平台限制见 [iOS 自用指南](docs/ios-self-use.md)。
+
 ## 免责声明
 
 **请在使用本应用前仔细阅读以下声明：**

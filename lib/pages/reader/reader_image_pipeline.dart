@@ -16,6 +16,22 @@ extension _ReaderImagePipeline on _ReaderPageState {
     return _ReaderPageState._cachedImageManager!;
   }
 
+  /// Keep the decode axis and cache key identical across the image widget,
+  /// its custom builder, prefetching and aspect-ratio measurement. Only one
+  /// dimension is constrained so the decoded image retains its original ratio.
+  ({int? width, int? height}) get _readerImageDecodeSize {
+    final viewport = MediaQuery.sizeOf(context);
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    return _isHorizontalScrollMode
+        ? (width: null, height: (viewport.height * pixelRatio).round())
+        : (width: (viewport.width * pixelRatio).round(), height: null);
+  }
+
+  ImageProvider _readerDisplayImageProvider(ImageProvider original) {
+    final size = _readerImageDecodeSize;
+    return ResizeImage.resizeIfNeeded(size.width, size.height, original);
+  }
+
   // ── 图片预加载 ──
 
   void _preloadImages(int centerIndex, {int range = 2}) {
@@ -25,9 +41,11 @@ extension _ReaderImagePipeline on _ReaderPageState {
       final i = centerIndex + offset;
       if (i < 0 || i >= count) continue;
       precacheImage(
-        CachedNetworkImageProvider(
-          _detail!.contents[i],
-          cacheManager: _readerImageCacheManager,
+        _readerDisplayImageProvider(
+          CachedNetworkImageProvider(
+            _detail!.contents[i],
+            cacheManager: _readerImageCacheManager,
+          ),
         ),
         context,
         onError: (_, _) {},
@@ -56,9 +74,11 @@ extension _ReaderImagePipeline on _ReaderPageState {
       final chap = _chain[ci];
       if (chap.isDownloaded) continue;
       precacheImage(
-        CachedNetworkImageProvider(
-          chap.contents[li],
-          cacheManager: _readerImageCacheManager,
+        _readerDisplayImageProvider(
+          CachedNetworkImageProvider(
+            chap.contents[li],
+            cacheManager: _readerImageCacheManager,
+          ),
         ),
         context,
         onError: (_, _) {},
@@ -95,7 +115,7 @@ extension _ReaderImagePipeline on _ReaderPageState {
     });
   }
 
-  /// 记录单张图片的原始尺寸，供占位符/错误 Widget 估算高度。
+  /// 记录保持原图比例的解码尺寸，供占位符/错误 Widget 估算高度。
   void _recordImageNaturalSize(String source, Size size) {
     if (size.isEmpty) return;
     // 重新插入可刷新插入序，避免活跃图片被 LRU 误淘汰。
@@ -106,7 +126,7 @@ extension _ReaderImagePipeline on _ReaderPageState {
     }
   }
 
-  /// 解析并缓存图片原始尺寸，完成后释放 ImageInfo / listener。
+  /// 复用显示尺寸的图片缓存获取宽高比，完成后释放 ImageInfo / listener。
   void _resolveAndCacheImageSize(ImageProvider provider, String source) {
     if (_imageNaturalSizes.containsKey(source)) return;
     late final ImageStreamListener listener;
@@ -309,10 +329,7 @@ extension _ReaderImagePipeline on _ReaderPageState {
     final imageFit = _isHorizontalScrollMode
         ? BoxFit.fitHeight
         : (useFullViewport ? BoxFit.contain : BoxFit.fitWidth);
-    final screenSize = MediaQuery.sizeOf(context);
-    final memCacheWidth = _isHorizontalScrollMode
-        ? (screenSize.height * MediaQuery.devicePixelRatioOf(context)).round()
-        : (screenSize.width * MediaQuery.devicePixelRatioOf(context)).round();
+    final decodeSize = _readerImageDecodeSize;
 
     // 竖向滚动模式下，占位符使用预估高度以防页面跳动；翻页模式占满
     // viewport 不需要估算。横向滚动模式高度虽由外层 SizedBox 约束，
@@ -335,13 +352,13 @@ extension _ReaderImagePipeline on _ReaderPageState {
         width: _isHorizontalScrollMode ? null : double.infinity,
         height: useFullViewport ? double.infinity : null,
         // 与网络图一致：按屏幕尺寸限制解码，避免原图像素常驻内存。
-        cacheWidth: _isHorizontalScrollMode ? null : memCacheWidth,
-        cacheHeight: _isHorizontalScrollMode ? memCacheWidth : null,
+        cacheWidth: decodeSize.width,
+        cacheHeight: decodeSize.height,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          // 图片首帧渲染后，异步解析原始尺寸并缓存。
+          // 首帧后复用同一解码缓存读取宽高比，不再解码原图。
           if (frame == 0 && !_imageNaturalSizes.containsKey(imageSource)) {
             _resolveAndCacheImageSize(
-              FileImage(File(imageSource)),
+              _readerDisplayImageProvider(FileImage(File(imageSource))),
               imageSource,
             );
           }
@@ -399,7 +416,8 @@ extension _ReaderImagePipeline on _ReaderPageState {
         imageUrl: imageSource,
         cacheManager: _readerImageCacheManager,
         fit: imageFit,
-        memCacheWidth: memCacheWidth,
+        memCacheWidth: decodeSize.width,
+        memCacheHeight: decodeSize.height,
         width: _isHorizontalScrollMode ? null : double.infinity,
         height: useFullViewport ? double.infinity : null,
         // 交叉淡出期间 octo_image 会把真图居中叠在占位区域上，占位尺寸
@@ -410,10 +428,13 @@ extension _ReaderImagePipeline on _ReaderPageState {
         fadeOutDuration: _ReaderPageState._imageTransitionDuration,
         imageBuilder: (_, imageProvider) {
           _clearImageRetryState(key);
-          // 图片加载成功后，异步解析其原始尺寸并缓存。
-          _resolveAndCacheImageSize(imageProvider, imageSource);
+          // CachedNetworkImage passes the original provider to this callback,
+          // not OctoImage's resized provider. Reapply the same decode size so
+          // the visible image and ratio lookup reuse its decoded cache entry.
+          final displayProvider = _readerDisplayImageProvider(imageProvider);
+          _resolveAndCacheImageSize(displayProvider, imageSource);
           final loadedImage = Image(
-            image: imageProvider,
+            image: displayProvider,
             fit: imageFit,
             width: _isHorizontalScrollMode ? null : double.infinity,
             height: useFullViewport ? double.infinity : null,

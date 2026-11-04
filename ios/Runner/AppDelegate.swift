@@ -12,7 +12,7 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    let messenger = engineBridge.engine.binaryMessenger
+    let messenger = engineBridge.applicationRegistrar.messenger()
     let channel = FlutterMethodChannel(
       name: "io.github.caolib.kira/app_icon",
       binaryMessenger: messenger
@@ -20,9 +20,22 @@ import UIKit
     channel.setMethodCallHandler { (call, result) in
       switch call.method {
       case "setAppIcon":
-        let index = call.arguments as? [String: Any]
-        let idx = index?["index"] as? Int ?? 0
+        guard UIApplication.shared.supportsAlternateIcons else {
+          result(FlutterError(code: "icon_unsupported", message: "当前设备不支持切换应用图标。", details: nil))
+          return
+        }
+        guard let arguments = call.arguments as? [String: Any],
+          let idx = arguments["index"] as? Int,
+          (0...1).contains(idx)
+        else {
+          result(FlutterError(code: "invalid_icon", message: "应用图标编号无效。", details: nil))
+          return
+        }
         let iconName = idx == 0 ? nil : "AppIcon-1"
+        guard UIApplication.shared.alternateIconName != iconName else {
+          result(nil)
+          return
+        }
         UIApplication.shared.setAlternateIconName(iconName) { error in
           if let error = error {
             result(FlutterError(code: "icon_error", message: error.localizedDescription, details: nil))

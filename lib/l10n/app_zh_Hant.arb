@@ -2521,5 +2521,7 @@
   "accountViewPasswordLabel": "密碼",
   "accountViewPasswordUnavailable": "未儲存密碼（該帳號未勾選「記住帳號」或使用權杖登入）",
   "accountViewTokenLabel": "權杖 (Token)",
-  "accountViewCopiedToast": "已複製"
+  "accountViewCopiedToast": "已複製",
+  "iosDownloadLocationDescription": "下載儲存在應用程式文件目錄，可在「檔案」App 中的 Kira 目錄查看。",
+  "iosDownloadForegroundDescription": "iOS 下載時請保持應用程式在前景；切換到背景或鎖定螢幕後，系統可能暫停下載。"
 }

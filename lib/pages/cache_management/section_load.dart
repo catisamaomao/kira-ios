@@ -129,7 +129,7 @@ extension _CacheSectionLoad on _CacheManagementPageState {
 
   Future<void> _clearImageCacheSection(_FileCacheSection section) async {
     if (section.cacheKey == DefaultCacheManager.key) {
-      await DefaultCacheManager().emptyCache();
+      await CoverImageCacheManager.instance.emptyCache();
     } else {
       await CacheManager(Config(section.cacheKey)).emptyCache();
     }

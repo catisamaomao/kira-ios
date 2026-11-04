@@ -10,6 +10,7 @@ import '../theme/app_status_colors.dart';
 import '../utils/download_directory.dart';
 import '../utils/download_manager.dart';
 import '../utils/novel_download_manager.dart';
+import '../utils/platform_features.dart';
 import '../utils/toast.dart';
 import 'app_sheet.dart';
 import 'settings_section.dart';
@@ -68,6 +69,10 @@ class _DownloadSettingsSheetState extends State<DownloadSettingsSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (PlatformFeatures.isIOS) ...[
+            Text(l10n.iosDownloadForegroundDescription, style: tt.bodySmall),
+            const SizedBox(height: AppSpacing.md),
+          ],
           // 并发警告只提示一次：两区的并发滑杆共用这条风险说明。
           Container(
             width: double.infinity,
@@ -144,7 +149,12 @@ class _DownloadSettingsSheetState extends State<DownloadSettingsSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    trailing: downloads.customSaveDirectory == null
+                    subtitle: PlatformFeatures.isIOS
+                        ? Text(l10n.iosDownloadLocationDescription)
+                        : null,
+                    trailing: !PlatformFeatures.customDownloadDirectory
+                        ? null
+                        : downloads.customSaveDirectory == null
                         ? const Icon(Icons.chevron_right)
                         : PopupMenuButton<String>(
                             onSelected: (value) {
@@ -159,7 +169,9 @@ class _DownloadSettingsSheetState extends State<DownloadSettingsSheet> {
                               ),
                             ],
                           ),
-                    onTap: _changeSaveLocation,
+                    onTap: PlatformFeatures.customDownloadDirectory
+                        ? _changeSaveLocation
+                        : null,
                   ),
                   const Divider(height: AppSpacing.xl),
                   SwitchListTile(
@@ -222,7 +234,12 @@ class _DownloadSettingsSheetState extends State<DownloadSettingsSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    trailing: novels.customSaveDirectory == null
+                    subtitle: PlatformFeatures.isIOS
+                        ? Text(l10n.iosDownloadLocationDescription)
+                        : null,
+                    trailing: !PlatformFeatures.customDownloadDirectory
+                        ? null
+                        : novels.customSaveDirectory == null
                         ? const Icon(Icons.chevron_right)
                         : PopupMenuButton<String>(
                             onSelected: (value) {
@@ -239,7 +256,9 @@ class _DownloadSettingsSheetState extends State<DownloadSettingsSheet> {
                               ),
                             ],
                           ),
-                    onTap: () => _changeNovelSaveLocation(novels),
+                    onTap: PlatformFeatures.customDownloadDirectory
+                        ? () => _changeNovelSaveLocation(novels)
+                        : null,
                   ),
                 ],
               ),
